@@ -87,7 +87,8 @@ public class COSC322Test extends GamePlayer {
     @Override
     public boolean handleGameMessage(String messageType, Map<String, Object> msgDetails) {
         System.out.println("Message Type: " + messageType);
-
+        boolean myFirst = true;
+        
         if (messageType.equals(GameMessage.GAME_STATE_BOARD)) {
             // Update the game state
             gameState = (ArrayList<Integer>) msgDetails.get(AmazonsGameMessage.GAME_STATE);
@@ -97,8 +98,29 @@ public class COSC322Test extends GamePlayer {
             // Print the board
             System.out.println("\n--- CURRENT BOARD STATE ---");
             QueenActions.printBoard(gameState);
+            //check we are first or second to play
+            String player = (String)(msgDetails.get("PLAYER_BLACK"));
+            if(player.equals(userName)){
+                System.out.println("We are the second player(Black)");
+                myFirst = false;
+            }
+            else{
+                System.out.println("We are the first player(White)");
+                myFirst = true;
+            }
+
+            if(myFirst){
+                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState,3,Integer.MIN_VALUE, Integer.MAX_VALUE, true, myFirst);
+                if(bestMove.get(1).get(0) != -1){
+                    ArrayList<Integer> queenPosCurrent = bestMove.get(1);
+                    ArrayList<Integer> queenPosNew = bestMove.get(2);
+                    ArrayList<Integer> arrowPos = bestMove.get(3);
+                    gameClient.sendMoveMessage(queenPosCurrent,queenPosNew,arrowPos);
+                }
+            }
             // Step 1 Verification: Queen Actions
             verifyQueenActions();
+            
         }
         else if (messageType.equals(GameMessage.GAME_ACTION_MOVE)) {
             // An opponent has made a move

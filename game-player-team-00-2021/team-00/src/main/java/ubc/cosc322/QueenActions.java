@@ -245,4 +245,16 @@ public class QueenActions {
         }
         System.out.println("   ---------------------");
     }
+    public static ArrayList<Integer> simulateMove(ArrayList<Integer> gameState, int startRow, int startCol, int endRow, int endCol, int arrowRow, int arrowCol){
+        ArrayList<Integer> newstate = new ArrayList<>(gameState);
+        int queenType = newstate.get(QueenActions.rcToIndex(startRow, startCol));
+        // remove the queen from start position
+        newstate.set(QueenActions.rcToIndex(startRow, startCol), QueenActions.EMPTY);
+        // set the queen to end position
+        newstate.set(QueenActions.rcToIndex(endRow, endCol), queenType);
+        // shoot arrow
+        newstate.set(QueenActions.rcToIndex(arrowRow, arrowCol), QueenActions.ARROW);
+        
+        return newstate;
+    }
 }
