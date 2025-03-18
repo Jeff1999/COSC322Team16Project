@@ -145,25 +145,29 @@ public class MinMax {
         }
     }
     //check the game is over or not
-    public static boolean isGameOver(ArrayList<Integer> gamestate){
+    public static boolean isGameOver(ArrayList<Integer> gamestate) {
         List<int[]> whiteQueens = QueenActions.getQueenPositions(gamestate, true);
-
         List<int[]> blackQueens = QueenActions.getQueenPositions(gamestate, false);
-        //check white can move or not
+        
+        // Check if white can move
         boolean whiteCanMove = false;
-        for(int[] queen : whiteQueens){
-            if(!QueenActions.getQueenMoves(gamestate, queen[0], queen[1]).isEmpty()){
+        for(int[] queen : whiteQueens) {
+            if(!QueenActions.getQueenMoves(gamestate, queen[0], queen[1]).isEmpty()) {
                 whiteCanMove = true;
                 break;
             }
         }
-        //check black can move or not
+        
+        // Check if black can move - Fixed the semicolon bug
         boolean blackCanMove = false;
-        for(int[] queen : blackQueens){
-            if(!QueenActions.getQueenMoves(gamestate, queen[0], queen[1]).isEmpty());
-            blackCanMove = true;
-            break;
+        for(int[] queen : blackQueens) {
+            if(!QueenActions.getQueenMoves(gamestate, queen[0], queen[1]).isEmpty()) {
+                blackCanMove = true;
+                break;
+            }
         }
+        
+        // Game is over if either player cannot move
         return !whiteCanMove || !blackCanMove;
     }
 }

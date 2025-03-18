@@ -37,6 +37,8 @@ public class COSC322Test extends GamePlayer {
         COSC322Test player = new COSC322Test(args.length > 0 ? args[0] : "TeamPlayer", 
                                            args.length > 1 ? args[1] : "password");
         
+        // Rest of your code
+        
         if(player.getGameGUI() == null) {
             player.Go();
         }
@@ -99,14 +101,16 @@ public class COSC322Test extends GamePlayer {
             System.out.println("\n--- CURRENT BOARD STATE ---");
             QueenActions.printBoard(gameState);
             //check we are first or second to play
-            String player = (String)(msgDetails.get("PLAYER_BLACK"));
-            if(player.equals(userName)){
-                System.out.println("We are the second player(Black)");
-                myFirst = false;
-            }
-            else{
-                System.out.println("We are the first player(White)");
+            // Replace your current player detection code with this
+            if (msgDetails.containsKey("PLAYER_BLACK")) {
+                String blackPlayer = (String)msgDetails.get("PLAYER_BLACK");
+                if (blackPlayer != null && blackPlayer.equals(userName)) {
+                    System.out.println("We are the second player (Black)");
+                    myFirst = false;
+                } else {
+                    System.out.println("We are the first player (White)");
                 myFirst = true;
+                }
             }
 
             if(myFirst){
@@ -145,6 +149,17 @@ public class COSC322Test extends GamePlayer {
                 
             System.out.println("\n--- BOARD AFTER OPPONENT MOVE ---");
             QueenActions.printBoard(gameState);
+
+            if (gameState != null) {
+                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState, 3, Integer.MIN_VALUE, Integer.MAX_VALUE, true, !myFirst);
+                if (bestMove.get(1).get(0) != -1) {
+                    ArrayList<Integer> ourQueenPosCurrent = bestMove.get(1);
+                    ArrayList<Integer> ourQueenPosNew = bestMove.get(2);
+                    ArrayList<Integer> ourArrowPos = bestMove.get(3);
+                    gameClient.sendMoveMessage(ourQueenPosCurrent, ourQueenPosNew, ourArrowPos);
+                }
+            }
+
         }
         
         return true;
