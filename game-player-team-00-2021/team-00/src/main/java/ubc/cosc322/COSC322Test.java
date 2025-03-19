@@ -34,7 +34,7 @@ public class COSC322Test extends GamePlayer {
      * @param args for name and passwd
      */
     public static void main(String[] args) {
-        COSC322Test player = new COSC322Test(args.length > 0 ? args[0] : "TeamPlayer", 
+        COSC322Test player = new COSC322Test(args.length > 0 ? args[0] : "TeamPlayer1", 
                                            args.length > 1 ? args[1] : "password");
         
         // Rest of your code
@@ -100,31 +100,36 @@ public class COSC322Test extends GamePlayer {
             // Print the board
             System.out.println("\n--- CURRENT BOARD STATE ---");
             QueenActions.printBoard(gameState);
+
             //check we are first or second to play
             // Replace your current player detection code with this
+                
+        }   
+        else if(messageType.equals(GameMessage.GAME_ACTION_START)){
             if (msgDetails.containsKey("PLAYER_BLACK")) {
                 String blackPlayer = (String)msgDetails.get("PLAYER_BLACK");
                 if (blackPlayer != null && blackPlayer.equals(userName)) {
-                    System.out.println("We are the second player (Black)");
-                    myFirst = false;
+                    System.out.println("We are the first player (Black)");
+                    myFirst = true;
                 } else {
-                    System.out.println("We are the first player (White)");
-                myFirst = true;
+                    System.out.println("We are the second player (White)");
+                    myFirst = false;
                 }
             }
 
             if(myFirst){
-                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState,3,Integer.MIN_VALUE, Integer.MAX_VALUE, true, myFirst);
+                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState,1,Integer.MIN_VALUE, Integer.MAX_VALUE, true, true);// isWhite = ture means black move first
                 if(bestMove.get(1).get(0) != -1){
                     ArrayList<Integer> queenPosCurrent = bestMove.get(1);
                     ArrayList<Integer> queenPosNew = bestMove.get(2);
                     ArrayList<Integer> arrowPos = bestMove.get(3);
+                    gameState = QueenActions.executeMove(gameState,queenPosCurrent.get(0),queenPosCurrent.get(1), queenPosNew.get(0),queenPosNew.get(1), arrowPos.get(0),arrowPos.get(1));
                     gameClient.sendMoveMessage(queenPosCurrent,queenPosNew,arrowPos);
+                    if (gamegui != null) {
+                        gamegui.setGameState(gameState);
+                        gamegui.updateGameState(queenPosCurrent, queenPosNew, arrowPos);
+                    }
                 }
-            }
-            // Step 1 Verification: Queen Actions
-            verifyQueenActions();
-            
         }
         else if (messageType.equals(GameMessage.GAME_ACTION_MOVE)) {
             // An opponent has made a move
@@ -138,6 +143,7 @@ public class COSC322Test extends GamePlayer {
             System.out.println("  Arrow: " + arrowPos);
             
             if (gamegui != null) {
+                gamegui.setGameState(gameState);
                 gamegui.updateGameState(queenPos, queenTargetPos, arrowPos);
             }
             
@@ -146,23 +152,47 @@ public class COSC322Test extends GamePlayer {
                 queenPos.get(0), queenPos.get(1), 
                 queenTargetPos.get(0), queenTargetPos.get(1), 
                 arrowPos.get(0), arrowPos.get(1));
-                
+                if (gamegui != null) {
+                    gamegui.setGameState(gameState);
+                    gamegui.updateGameState(queenPos, queenTargetPos, arrowPos);
+                }
             System.out.println("\n--- BOARD AFTER OPPONENT MOVE ---");
             QueenActions.printBoard(gameState);
-
-            if (gameState != null) {
-                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState, 3, Integer.MIN_VALUE, Integer.MAX_VALUE, true, !myFirst);
-                if (bestMove.get(1).get(0) != -1) {
-                    ArrayList<Integer> ourQueenPosCurrent = bestMove.get(1);
-                    ArrayList<Integer> ourQueenPosNew = bestMove.get(2);
-                    ArrayList<Integer> ourArrowPos = bestMove.get(3);
-                    gameClient.sendMoveMessage(ourQueenPosCurrent, ourQueenPosNew, ourArrowPos);
+                myFirst = false;
+            if (myFirst) {
+                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState,1,Integer.MIN_VALUE, Integer.MAX_VALUE, true, true);// isWhite = ture means black move first
+                if(bestMove.get(1).get(0) != -1){
+                    ArrayList<Integer> queenPosCurrent = bestMove.get(1);
+                    ArrayList<Integer> queenPosNew = bestMove.get(2);
+                    ArrayList<Integer> arrowPos1 = bestMove.get(3);
+                    gameState = QueenActions.executeMove(gameState,queenPosCurrent.get(0),queenPosCurrent.get(1), queenPosNew.get(0),queenPosNew.get(1), arrowPos1.get(0),arrowPos1.get(1));
+                    gameClient.sendMoveMessage(queenPosCurrent,queenPosNew,arrowPos1);
+                    if (gamegui != null) {
+                        gamegui.setGameState(gameState);
+                        gamegui.updateGameState(queenPosCurrent, queenPosNew, arrowPos1);
+                    }
+                }
+            }
+            else{
+                ArrayList<ArrayList<Integer>> bestMove = MinMax.alpha_beta(gameState,1,Integer.MIN_VALUE, Integer.MAX_VALUE, true, false);// isWhite = ture means black move first
+                if(bestMove.get(1).get(0) != -1){
+                    ArrayList<Integer> queenPosCurrent = bestMove.get(1);
+                    ArrayList<Integer> queenPosNew = bestMove.get(2);
+                    ArrayList<Integer> arrowPos1 = bestMove.get(3);
+                    gameState = QueenActions.executeMove(gameState,queenPosCurrent.get(0),queenPosCurrent.get(1), queenPosNew.get(0),queenPosNew.get(1), arrowPos1.get(0),arrowPos1.get(1));
+                    gameClient.sendMoveMessage(queenPosCurrent,queenPosNew,arrowPos1);
+                    if (gamegui != null) {
+                        gamegui.setGameState(gameState);
+                        gamegui.updateGameState(queenPosCurrent, queenPosNew, arrowPos1);
+                    }
                 }
             }
 
         }
+    }
+            return true;
         
-        return true;
+    
     }
     
     /**

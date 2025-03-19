@@ -28,6 +28,7 @@ public class QueenActions {
         {1, 1}    // Down-Right
 
     };
+    private static boolean isBlackTurn = true;
     
     /**
      * Gets all possible moves for a queen at the specified position
@@ -50,7 +51,7 @@ public class QueenActions {
                 c += dir[1];
                 
                 // Check if still on board
-                if (r < 1 || r > 9 || c < 1 || c > 9) {
+                if (r < 1 || r > 10 || c < 1 || c > 10) {
                     break;
                 }
                 
@@ -105,11 +106,14 @@ public class QueenActions {
         
         // Get the queen type
         int queenType = newState.get(startIndex);
-        
+
         // Execute move
-        newState.set(startIndex, EMPTY);
+        boolean valid = isValidMove(gameState, startRow, startCol, endRow, endCol, arrowRow, arrowCol);
+        if(valid){
+        newState.set(startIndex, QueenActions.EMPTY);
         newState.set(endIndex, queenType);
-        newState.set(arrowIndex, ARROW);
+        newState.set(arrowIndex, QueenActions.ARROW);
+        }
         return newState;
     }
     
@@ -129,37 +133,61 @@ public class QueenActions {
                                      int startRow, int startCol,
                                      int endRow, int endCol,
                                      int arrowRow, int arrowCol) {
-        // Check if queen move is valid
-        List<int[]> queenMoves = getQueenMoves(gameState, startRow, startCol);
+        // Check if queen start position is valid and contains a queen
+        int startIndex = rcToIndex(startRow, startCol);
+        if(startIndex < 0 || startIndex >= gameState.size() || (gameState.get(startIndex) != WHITE_QUEEN && gameState.get(startIndex) != BLACK_QUEEN)){
+            //System.out.println("Invalid start position");
+            return false;
+        }
+        // check the end position is valid and empty
+        int endIndex = rcToIndex(endRow, endCol);
+        if(endIndex < 0 || endIndex >= gameState.size() || gameState.get(endIndex) != EMPTY){
+            //System.out.println("Invalid end position");
+            return false;
+        }
+        // check arrow position is valid and empty
+        int arrowIndex = rcToIndex(arrowRow, arrowCol);
+        if(arrowIndex < 0 || arrowIndex >= gameState.size() || gameState.get(arrowIndex) != EMPTY){
+            //System.out.println("Invalid arrow");
+            return false;
+        }
+        // check the queen move is valid
+        List<int[]> queenMove = getQueenMoves(gameState, arrowIndex, arrowCol);
         boolean validQueenMove = false;
-        for (int[] move : queenMoves) {
-            if (move[0] == endRow && move[1] == endCol) {
+        for(int[] move : queenMove){
+            if(move[0] == endRow && move[0] == endCol){
                 validQueenMove = true;
                 break;
             }
         }
-        
-        if (!validQueenMove) {
+        if(!validQueenMove){
+            //System.out.println("Invalid queen move"+ startRow + "," + startCol + "," + endRow + "," + endCol);
             return false;
         }
-        
-        // Simulate queen move for arrow validation
+        // simulate queen move for arrow validation
         ArrayList<Integer> tempState = new ArrayList<>(gameState);
-        int startIndex = rcToIndex(startRow, startCol);
-        int endIndex = rcToIndex(endRow, endCol);
-        
         int queenType = tempState.get(startIndex);
-        tempState.set(startIndex, EMPTY);
-        tempState.set(endIndex, queenType);
-        
-        // Check if arrow shot is valid
-        List<int[]> arrowMoves = getArrowShots(tempState, endRow, endCol);
-        for (int[] move : arrowMoves) {
-            if (move[0] == arrowRow && move[1] == arrowCol) {
-                return true;
+        tempState.set(startIndex, EMPTY);// remove the queen from start position
+        tempState.set(endIndex, queenType);// place the queen to end position
+        // check if the arrow shot is valid
+        List<int[]> arrowMove = getArrowShots(tempState, endRow, endCol);
+        boolean validArrowMove = false;
+        for(int[] move : arrowMove){
+            if(move[0] == arrowRow && move[1] == arrowCol){
+                validArrowMove = true;
+                break;
             }
         }
-        return false;
+        if(!validArrowMove){
+            //System.out.println("Invalid arrow shot");
+            return false;
+        }
+        // check if the arrow position is not occupied by an arrow
+        if(gameState.get(arrowIndex) == ARROW){
+            //System.out.println("Invalid arrow position");
+        }
+        return true;
+
     }
     
     /**

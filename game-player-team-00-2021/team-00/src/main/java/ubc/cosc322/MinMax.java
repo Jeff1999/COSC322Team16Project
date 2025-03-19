@@ -62,7 +62,7 @@ public class MinMax {
                             (centerControlWeight * blackCenterControl);
         
         // Return evaluation score based on player color
-        if (isWhite) {
+        if (!isWhite) {
             return (int)(whiteScore - blackScore);
         } else {
             return (int)(blackScore - whiteScore);
@@ -143,7 +143,7 @@ public class MinMax {
                 for(int [] move : moves){
                     List<int[]> arrowMoves = QueenActions.getArrowShots(gamestate, move[0], move[1]);
                     for (int[] arrow : arrowMoves){
-                        ArrayList<Integer> newState = QueenActions.simulateMove(gamestate, queen[0], queen[1], move[0], move[1], arrow[0], arrow[1]);
+                        ArrayList<Integer> newState = QueenActions.executeMove(gamestate, queen[0], queen[1], move[0], move[1], arrow[0], arrow[1]);
                         ArrayList<ArrayList<Integer>> result = alpha_beta(newState, depth-1, alpha, beta, false, isWhite);
                         int value = result.get(0).get(0);
                         // get better moves
@@ -191,7 +191,7 @@ public class MinMax {
                 for (int[] move : moves){
                     List<int[]> arrowMoves = QueenActions.getArrowShots(gamestate, move[0], move[1]);
                     for(int[] arrow : arrowMoves){
-                        ArrayList<Integer> newState = QueenActions.simulateMove(gamestate, queen[0], queen[1], move[0], move[1], arrow[0], arrow[1]);
+                        ArrayList<Integer> newState = QueenActions.executeMove(gamestate, queen[0], queen[1], move[0], move[1], arrow[0], arrow[1]);
                         ArrayList<ArrayList<Integer>> result = alpha_beta(newState, depth-1, alpha, beta, true, isWhite);
                         int value = result.get(0).get(0);
                         if(value < bestValue){
