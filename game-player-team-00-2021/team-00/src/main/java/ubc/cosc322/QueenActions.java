@@ -28,7 +28,6 @@ public class QueenActions {
         {1, 1}    // Down-Right
 
     };
-    private static boolean isBlackTurn = true;
     
     /**
      * Gets all possible moves for a queen at the specified position
