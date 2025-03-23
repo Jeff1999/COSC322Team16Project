@@ -213,13 +213,8 @@ public class COSC322Test extends GamePlayer {
         } else {
             // This shouldn't happen since we already checked for available moves,
             // but we'll handle it as a safety measure
-            System.out.println("ERROR: Minimax failed to find a move despite moves being available!");
-            System.out.println("First available move: " + 
-                "Queen from: [" + availableMoves.get(0).queenPos[0] + "," + availableMoves.get(0).queenPos[1] + "], " +
-                "Queen to: [" + availableMoves.get(0).queenTargetPos[0] + "," + availableMoves.get(0).queenTargetPos[1] + "], " +
-                "Arrow: [" + availableMoves.get(0).arrowPos[0] + "," + availableMoves.get(0).arrowPos[1] + "]");
-            
             // As a fallback, use the first available move instead of giving up
+            
             MinimaxAI.Move fallbackMove = availableMoves.get(0);
             
             ArrayList<Integer> queenPos = new ArrayList<>();
