@@ -6,7 +6,7 @@ import java.util.List;
 public class MinimaxAI {
     private boolean isBlackPlayer; // Whether the AI is playing as black
     public long startTime = System.currentTimeMillis();// start time
-    public long timeLimted = 28000;//time limited 30s;
+    public long timeLimted = 8000; //time limited 30s;
     public MinimaxAI(boolean isBlackPlayer) {
         this.isBlackPlayer = isBlackPlayer;
     }
@@ -14,11 +14,25 @@ public class MinimaxAI {
     
       //Find the best move using the Minimax algorithm
      
-    public Move findBestMoveWithDynamicDepth(ArrayList<Integer> gameState) {
+      public Move findBestMoveWithDynamicDepth(ArrayList<Integer> gameState) {
+        // Reset timer for new move calculation
+        startTime = System.currentTimeMillis();
+        
         Move bestMove = null;
-        int depth = 2; // start with depth 1
-        while(true){
-            if(System.currentTimeMillis() - startTime > timeLimted){
+        int depth = 2; // start with depth 2
+        
+        while(true) {
+            if(System.currentTimeMillis() - startTime > timeLimted) {
+                break;
+            }
+    
+            // Check if we've completely solved the position
+            List<Move> possibleMoves = generateMoves(gameState, true);
+        
+            // If we detect that we've exhausted the search (fully solved the position)
+            boolean fullyExhausted = (depth > possibleMoves.size() * 2);
+            if (fullyExhausted) {
+                System.out.println("Exhausted all options at depth " + (depth-1) + " with " + possibleMoves.size() + " moves");
                 break;
             }
             
@@ -26,15 +40,15 @@ public class MinimaxAI {
             MinimaxResult result = minimax(gameState, depth, true, Integer.MIN_VALUE, Integer.MAX_VALUE);
             
             //update the best move
-            if(result.move != null){
+            if(result.move != null) {
                 bestMove = result.move;
             }
-
+    
             // increase the depth if we have enough time
             depth++;
-            
         }
-        System.out.println("how deep we search: " + depth);
+        
+        System.out.println("how deep we search: " + (depth-1));
         return bestMove;
     }
     
@@ -89,23 +103,31 @@ public class MinimaxAI {
     
      // Generate all possible moves for the current player
      
-    private List<Move> generateMoves(ArrayList<Integer> gameState, boolean maximizingPlayer) {
+     public List<Move> generateMoves(ArrayList<Integer> gameState, boolean maximizingPlayer) {
         List<Move> moves = new ArrayList<>();
         int queenType = maximizingPlayer ? (isBlackPlayer ? 1 : 2) : (isBlackPlayer ? 2 : 1);
-
+    
         for (int i = 0; i < gameState.size(); i++) {
             if (gameState.get(i) == queenType) {
                 int[] pos = indexToRC(i);
-                List<int[]> queenMoves = getQueenMoves(gameState,pos[0], pos[1]);
+                List<int[]> queenMoves = getQueenMoves(gameState, pos[0], pos[1]);
                 for (int[] move : queenMoves) {
-                    List<int[]> arrowShots = getArrowShots(gameState,move[0], move[1]);
+                    // Create a temporary board state with the queen moved
+                    ArrayList<Integer> tempState = new ArrayList<>(gameState);
+                    int startIdx = rcToIndex(pos[0], pos[1]);
+                    int endIdx = rcToIndex(move[0], move[1]);
+                    tempState.set(startIdx, 0); // Empty the starting position
+                    tempState.set(endIdx, queenType); // Move the queen
+                    
+                    // Now get arrow shots using the updated board state
+                    List<int[]> arrowShots = getArrowShots(tempState, move[0], move[1]);
                     for (int[] arrow : arrowShots) {
                         moves.add(new Move(pos, move, arrow));
                     }
                 }
             }
         }
-
+    
         return moves;
     }
 

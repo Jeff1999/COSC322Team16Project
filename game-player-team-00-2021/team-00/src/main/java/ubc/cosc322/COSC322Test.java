@@ -120,14 +120,35 @@ public class COSC322Test extends GamePlayer {
             // Update the board with the opponent's move
             updateGameState(queenPos, queenTargetPos, arrowPos);
             
-            // Now it's our turn
-            myTurn = true;
-            //makeRandomMove();
-            makeMinimaxMove();
+            // Check if we have any valid moves
+            MinimaxAI minimaxAI = new MinimaxAI(isBlackPlayer);
+            List<MinimaxAI.Move> myPossibleMoves = minimaxAI.generateMoves(gameState, true);
+    
+            if (myPossibleMoves.isEmpty()) {
+                // We have no valid moves - game is over and we lost
+                System.out.println("NO VALID MOVES AVAILABLE - GAME OVER");
+                System.out.println("Player " + (isBlackPlayer ? "BLACK" : "WHITE") + " has lost the game.");
+                System.out.println("You lose! Resigning from the game...");
+                
+                // Add a delay before exiting
+                try {
+                    System.out.println("Game will close in 10 seconds...");
+                    Thread.sleep(10000); // 10 second delay
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                
+                gameClient.logout(); // Disconnect from the server
+                System.exit(0);     // Exit the program cleanly
+            } else {
+                // Now it's our turn
+                myTurn = true;
+                makeMinimaxMove();
+            }
         }
-        
         return true;
     }
+
     private void makeMinimaxMove() {
         MinimaxAI minimaxAI = new MinimaxAI(isBlackPlayer);
         if (!myTurn || gameState == null) {
@@ -135,6 +156,20 @@ public class COSC322Test extends GamePlayer {
         }
     
         System.out.println("Making my move using Minimax...");
+        
+        // First check if there are any moves available at all
+        List<MinimaxAI.Move> availableMoves = minimaxAI.generateMoves(gameState, true);
+        System.out.println("Available moves count: " + availableMoves.size());
+        
+        if (availableMoves.isEmpty()) {
+            System.out.println("NO VALID MOVES AVAILABLE - GAME OVER");
+            System.out.println("Player " + (isBlackPlayer ? "BLACK" : "WHITE") + " has lost the game.");
+            // Resign and exit cleanly
+            System.out.println("Resigning from the game");
+            gameClient.logout();
+            System.exit(0);
+            return;
+        }
     
         // Get the best move using Minimax
         MinimaxAI.Move bestMove = minimaxAI.findBestMoveWithDynamicDepth(gameState);
@@ -163,71 +198,57 @@ public class COSC322Test extends GamePlayer {
     
             // Send the move to the server
             gameClient.sendMoveMessage(queenPos, queenTargetPos, arrowPos);
+            
+            // Check if opponent has any valid moves
+            List<MinimaxAI.Move> opponentPossibleMoves = minimaxAI.generateMoves(gameState, false);
+            
+            if (opponentPossibleMoves.isEmpty()) {
+                System.out.println("OPPONENT HAS NO VALID MOVES - GAME OVER");
+                System.out.println("Player " + (isBlackPlayer ? "WHITE" : "BLACK") + " has lost the game.");
+                // Game is over and we won - we can continue normally as the server will handle this
+            }
     
             // Now it's the opponent's turn
             myTurn = false;
         } else {
-            System.out.println("No valid moves found!");
-        }
-    }
-    /**
-     * Make a random legal move
-     */
-    /*private void makeRandomMove() {
-        if (!myTurn || gameState == null) {
-            return;
-        }
-        
-        System.out.println("Making my move...");
-        
-        // Get our queens based on whether we're black or white
-        List<int[]> myQueens = getMyQueens();
-        
-        // Try each queen until we find a valid move
-        for (int[] queen : myQueens) {
-            List<int[]> moves = getQueenMoves(queen[0], queen[1]);
+            // This shouldn't happen since we already checked for available moves,
+            // but we'll handle it as a safety measure
+            System.out.println("ERROR: Minimax failed to find a move despite moves being available!");
+            System.out.println("First available move: " + 
+                "Queen from: [" + availableMoves.get(0).queenPos[0] + "," + availableMoves.get(0).queenPos[1] + "], " +
+                "Queen to: [" + availableMoves.get(0).queenTargetPos[0] + "," + availableMoves.get(0).queenTargetPos[1] + "], " +
+                "Arrow: [" + availableMoves.get(0).arrowPos[0] + "," + availableMoves.get(0).arrowPos[1] + "]");
             
-            for (int[] move : moves) {
-                List<int[]> arrows = getArrowShots(move[0], move[1]);
-                
-                if (!arrows.isEmpty()) {
-                    int[] arrow = arrows.get(0);
-                    
-                    // Convert to ArrayList for the API
-                    ArrayList<Integer> queenPos = new ArrayList<>();
-                    queenPos.add(queen[0]);
-                    queenPos.add(queen[1]);
-                    
-                    ArrayList<Integer> queenTargetPos = new ArrayList<>();
-                    queenTargetPos.add(move[0]);
-                    queenTargetPos.add(move[1]);
-                    
-                    ArrayList<Integer> arrowPos = new ArrayList<>();
-                    arrowPos.add(arrow[0]);
-                    arrowPos.add(arrow[1]);
-                    
-                    // Send the move
-                    System.out.println("My move:");
-                    System.out.println("  Queen from: " + queenPos);
-                    System.out.println("  Queen to: " + queenTargetPos);
-                    System.out.println("  Arrow: " + arrowPos);
-                    
-                    // Update our local game state
-                    updateGameState(queenPos, queenTargetPos, arrowPos);
-                    
-                    // Send the move to the server
-                    gameClient.sendMoveMessage(queenPos, queenTargetPos, arrowPos);
-                    
-                    // Now it's the opponent's turn
-                    myTurn = false;
-                    return;
-                }
-            }
+            // As a fallback, use the first available move instead of giving up
+            MinimaxAI.Move fallbackMove = availableMoves.get(0);
+            
+            ArrayList<Integer> queenPos = new ArrayList<>();
+            queenPos.add(fallbackMove.queenPos[0]);
+            queenPos.add(fallbackMove.queenPos[1]);
+    
+            ArrayList<Integer> queenTargetPos = new ArrayList<>();
+            queenTargetPos.add(fallbackMove.queenTargetPos[0]);
+            queenTargetPos.add(fallbackMove.queenTargetPos[1]);
+    
+            ArrayList<Integer> arrowPos = new ArrayList<>();
+            arrowPos.add(fallbackMove.arrowPos[0]);
+            arrowPos.add(fallbackMove.arrowPos[1]);
+    
+            System.out.println("Using fallback move:");
+            System.out.println("  Queen from: " + queenPos);
+            System.out.println("  Queen to: " + queenTargetPos);
+            System.out.println("  Arrow: " + arrowPos);
+    
+            // Update our local game state
+            updateGameState(queenPos, queenTargetPos, arrowPos);
+    
+            // Send the move to the server
+            gameClient.sendMoveMessage(queenPos, queenTargetPos, arrowPos);
+            
+            // Now it's the opponent's turn
+            myTurn = false;
         }
-        
-        System.out.println("No valid moves found!");
     }
-    */
 
     /**
      * Update the game state with a move
@@ -253,46 +274,42 @@ public class COSC322Test extends GamePlayer {
         
         printBoard();
     }
-    
-    /**
-     * Print the current board state
-     */
-// Only replace the printBoard method in your COSC322Test.java with this fixed version:
 
-/**
- * Print the current board state
- */
-private void printBoard() {
-    if (gameState == null) return;
+    /**
+        * Print the current board state
+    */
+    private void printBoard() {
+        if (gameState == null) return;
     
-    System.out.println("\n--- CURRENT BOARD STATE ---");
-    System.out.println("    1 2 3 4 5 6 7 8 9 10");
-    System.out.println("   ---------------------");
+        System.out.println("\n--- CURRENT BOARD STATE ---");
+        System.out.println("    1 2 3 4 5 6 7 8 9 10");
+        System.out.println("   ---------------------");
     
-    for (int row = 10; row >= 1; row--) {  // Changed to count DOWN from 10 to 1
-        System.out.print(row < 10 ? row + "  |" : row + " |");
+        for (int row = 10; row >= 1; row--) {  // Changed to count DOWN from 10 to 1
+            System.out.print(row < 10 ? row + "  |" : row + " |");
         
-        for (int col = 1; col <= 10; col++) {
-            int index = rcToIndex(row, col);
-            char symbol = '.';
+            for (int col = 1; col <= 10; col++) {
+                int index = rcToIndex(row, col);
+                char symbol = '.';
             
-            if (index < gameState.size()) {
-                switch (gameState.get(index)) {
-                    case 0: symbol = '.'; break; 
-                    case 1: symbol = 'B'; break;
-                    case 2: symbol = 'W'; break;
-                    case 3: symbol = 'X'; break;
-                    default: symbol = '?';
+                if (index < gameState.size()) {
+                    switch (gameState.get(index)) {
+                        case 0: symbol = '.'; break; 
+                        case 1: symbol = 'B'; break;
+                        case 2: symbol = 'W'; break;
+                        case 3: symbol = 'X'; break;
+                        default: symbol = '?';
+                    }
                 }
-            }
-            
-            System.out.print(" " + symbol);
-        }
+
+                System.out.print(" " + symbol);
+                }
         
-        System.out.println(" |");
+            System.out.println(" |");
+            }
+
+        System.out.println("   ---------------------");
     }
-    System.out.println("   ---------------------");
-}
     
     /**
      * Get positions of our queens
@@ -347,14 +364,6 @@ private void printBoard() {
         }
         
         return moves;
-    }
-    
-    /**
-     * Get valid arrow shots from a position
-     */
-    private List<int[]> getArrowShots(int row, int col) {
-        // Arrow movement follows the same rules as queen movement
-        return getQueenMoves(row, col);
     }
     
     /**
