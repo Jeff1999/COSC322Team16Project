@@ -214,7 +214,7 @@ public class COSC322Test extends GamePlayer {
             // This shouldn't happen since we already checked for available moves,
             // but we'll handle it as a safety measure
             // As a fallback, use the first available move instead of giving up
-            
+
             MinimaxAI.Move fallbackMove = availableMoves.get(0);
             
             ArrayList<Integer> queenPos = new ArrayList<>();

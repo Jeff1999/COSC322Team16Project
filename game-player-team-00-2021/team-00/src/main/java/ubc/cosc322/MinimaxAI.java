@@ -6,7 +6,7 @@ import java.util.List;
 public class MinimaxAI {
     private boolean isBlackPlayer; // Whether the AI is playing as black
     public long startTime = System.currentTimeMillis();// start time
-    public long timeLimted = 8000; //time limited 30s;
+    public long timeLimted = 25000; //time limited 30s;
     public MinimaxAI(boolean isBlackPlayer) {
         this.isBlackPlayer = isBlackPlayer;
     }
@@ -151,16 +151,45 @@ public class MinimaxAI {
 
     // f_value
     private int evaluateState(ArrayList<Integer> gameState) {
-        // mobility
+        // Get the game phase (early, mid, late) based on number of moves
+        int totalMoves = generateMoves(gameState, true).size() + generateMoves(gameState, false).size();
+        boolean isEndgame = totalMoves < 50; // Adjust this threshold as needed
+        
+        // Mobility (more important in endgame)
         int myMoves = generateMoves(gameState, true).size();
         int opponentMoves = generateMoves(gameState, false).size();
         int mobilityScore = myMoves - opponentMoves;
-        // queen position
+        
+        // Queen position and arrow blocking
         int queenPositionScore = evaluateQueenPosition(gameState);
         int arrowPositionScore = evaluateArrowBlocking(gameState);
-        int total = mobilityScore*6 + queenPositionScore*4 + arrowPositionScore * 3;
+        
+        // New territory and partitioning evaluations
+        int territoryScore = evaluateTerritory(gameState);
+        int partitioningScore = evaluatePartitioning(gameState);
+        int regionSizeScore = evaluateRegionSizes(gameState);
+        int regionSizeWeight = 12; // High weight because this directly targets the winning strategy
+    
+
+        
+        // Adjust weights based on game phase
+        int mobilityWeight = isEndgame ? 5 : 8;
+        int territoryWeight = isEndgame ? 12 : 15;
+        int partitioningWeight = 11;
+        int queenPositionWeight = isEndgame ? 6 : 8;
+        int arrowBlockingWeight = 5;
+        
+        // Calculate final score
+        int total = (mobilityScore * mobilityWeight) + 
+                (territoryScore * territoryWeight) + 
+                (partitioningScore * partitioningWeight) + 
+                (queenPositionScore * queenPositionWeight) + 
+                (arrowPositionScore * arrowBlockingWeight) +
+                (regionSizeScore * regionSizeWeight);
+    
         return total;
     }
+
     // Evaluate the position of the queens
     private int evaluateQueenPosition(ArrayList<Integer> gameState){
             int myQueenScore = 0;
@@ -313,6 +342,258 @@ public class MinimaxAI {
             this.move = move;
         }
     }
+
+    private int evaluateTerritory(ArrayList<Integer> gameState) {
+        // Store unique squares each player can reach
+        java.util.Set<String> myTerritorySet = new java.util.HashSet<>();
+        java.util.Set<String> opponentTerritorySet = new java.util.HashSet<>();
+        
+        // Get positions of queens for both players
+        List<int[]> myQueens = new ArrayList<>();
+        List<int[]> opponentQueens = new ArrayList<>();
+        
+        int myQueenType = isBlackPlayer ? 1 : 2;
+        int opponentQueenType = isBlackPlayer ? 2 : 1;
+        
+        // Find all queens
+        for (int i = 0; i < gameState.size(); i++) {
+            if (gameState.get(i) == myQueenType) {
+                myQueens.add(indexToRC(i));
+            } else if (gameState.get(i) == opponentQueenType) {
+                opponentQueens.add(indexToRC(i));
+            }
+        }
+        
+        // Calculate territory for my queens
+        for (int[] queen : myQueens) {
+            List<int[]> moves = getQueenMoves(gameState, queen[0], queen[1]);
+            for (int[] move : moves) {
+                myTerritorySet.add(move[0] + "," + move[1]);
+            }
+        }
+        
+        // Calculate territory for opponent queens
+        for (int[] queen : opponentQueens) {
+            List<int[]> moves = getQueenMoves(gameState, queen[0], queen[1]);
+            for (int[] move : moves) {
+                opponentTerritorySet.add(move[0] + "," + move[1]);
+            }
+        }
+        
+        // Calculate exclusive territory (areas only one player can access)
+        java.util.Set<String> myExclusiveTerritory = new java.util.HashSet<>(myTerritorySet);
+        myExclusiveTerritory.removeAll(opponentTerritorySet);
+        
+        java.util.Set<String> opponentExclusiveTerritory = new java.util.HashSet<>(opponentTerritorySet);
+        opponentExclusiveTerritory.removeAll(myTerritorySet);
+        
+        // Territories that can be accessed by both players are contested
+        int myTerritorySize = myTerritorySet.size();
+        int opponentTerritorySize = opponentTerritorySet.size();
+        int myExclusiveSize = myExclusiveTerritory.size();
+        int opponentExclusiveSize = opponentExclusiveTerritory.size();
+        
+        // We want to maximize our territory and especially our exclusive territory
+        // while minimizing the opponent's territory
+        return (myTerritorySize * 1) + (myExclusiveSize * 2) - (opponentTerritorySize * 1) - (opponentExclusiveSize * 2);
+    }
+
+    private int evaluatePartitioning(ArrayList<Integer> gameState) {
+        int partitionScore = 0;
+        
+        // Get positions of all queens
+        List<int[]> myQueens = new ArrayList<>();
+        List<int[]> opponentQueens = new ArrayList<>();
+        
+        int myQueenType = isBlackPlayer ? 1 : 2;
+        int opponentQueenType = isBlackPlayer ? 2 : 1;
+        
+        // Find all queens
+        for (int i = 0; i < gameState.size(); i++) {
+            if (gameState.get(i) == myQueenType) {
+                myQueens.add(indexToRC(i));
+            } else if (gameState.get(i) == opponentQueenType) {
+                opponentQueens.add(indexToRC(i));
+            }
+        }
+        
+        // Count arrows adjacent to empty spaces
+        // More adjacent empty spaces = less partitioning effect
+        for (int i = 0; i < gameState.size(); i++) {
+            if (gameState.get(i) == 3) { // Arrow
+                int[] pos = indexToRC(i);
+                int arrowEmptyNeighbors = countEmptyNeighbors(gameState, pos[0], pos[1]);
+                
+                // Check if this arrow separates our queen from opponents
+                boolean separatesQueens = isArrowSeparatingQueens(gameState, pos[0], pos[1], myQueens, opponentQueens);
+                
+                // Arrows with fewer empty neighbors are better at partitioning
+                // Arrows that separate queens are even better
+                partitionScore += (8 - arrowEmptyNeighbors) + (separatesQueens ? 5 : 0);
+            }
+        }
+        
+        return partitionScore;
+    }
+    
+    private int countEmptyNeighbors(ArrayList<Integer> gameState, int row, int col) {
+        int[][] directions = {
+            {-1, 0}, {1, 0}, {0, -1}, {0, 1}, 
+            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
+        };
+        
+        int emptyCount = 0;
+        for (int[] dir : directions) {
+            int r = row + dir[0];
+            int c = col + dir[1];
+            
+            if (r >= 1 && r <= 10 && c >= 1 && c <= 10) {
+                int index = rcToIndex(r, c);
+                if (gameState.get(index) == 0) { // Empty space
+                    emptyCount++;
+                }
+            }
+        }
+        
+        return emptyCount;
+    }
+    
+    private boolean isArrowSeparatingQueens(ArrayList<Integer> gameState, int arrowRow, int arrowCol, 
+                                          List<int[]> myQueens, List<int[]> opponentQueens) {
+        // Create a copy of the game state without this arrow to see if it's important for separation
+        ArrayList<Integer> tempState = new ArrayList<>(gameState);
+        tempState.set(rcToIndex(arrowRow, arrowCol), 0); // Remove the arrow temporarily
+        
+        // Check connectivity between queens in the modified state
+        for (int[] myQueen : myQueens) {
+            for (int[] opponentQueen : opponentQueens) {
+                if (canQueensConnect(tempState, myQueen, opponentQueen)) {
+                    // If queens can connect without this arrow, then the arrow is separating them
+                    return true;
+                }
+            }
+        }
+        
+        return false;
+    }
+    
+    private boolean canQueensConnect(ArrayList<Integer> gameState, int[] queen1, int[] queen2) {
+        // Simple check - can a path be traced from queen1 to queen2?
+        // This is a simplified approach using BFS
+        java.util.Queue<int[]> queue = new java.util.LinkedList<>();
+        java.util.Set<String> visited = new java.util.HashSet<>();
+        
+        queue.add(queen1);
+        visited.add(queen1[0] + "," + queen1[1]);
+        
+        int[][] directions = {
+            {-1, 0}, {1, 0}, {0, -1}, {0, 1}, 
+            {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
+        };
+        
+        while (!queue.isEmpty()) {
+            int[] current = queue.poll();
+            
+            // Check if we've reached queen2
+            if (current[0] == queen2[0] && current[1] == queen2[1]) {
+                return true;
+            }
+            
+            // Try each direction
+            for (int[] dir : directions) {
+                int r = current[0] + dir[0];
+                int c = current[1] + dir[1];
+                
+                if (r >= 1 && r <= 10 && c >= 1 && c <= 10) {
+                    String key = r + "," + c;
+                    if (!visited.contains(key)) {
+                        int index = rcToIndex(r, c);
+                        if (gameState.get(index) == 0 || (r == queen2[0] && c == queen2[1])) {
+                            queue.add(new int[]{r, c});
+                            visited.add(key);
+                        }
+                    }
+                }
+            }
+        }
+        
+        return false;
+    }
+
+    // Add a method to evaluate region size for each queen
+private int evaluateRegionSizes(ArrayList<Integer> gameState) {
+    int myRegionScore = 0;
+    int opponentRegionScore = 0;
+    
+    int myQueenType = isBlackPlayer ? 1 : 2;
+    int opponentQueenType = isBlackPlayer ? 2 : 1;
+    
+    // For each queen, calculate the size of its "region"
+    for (int i = 0; i < gameState.size(); i++) {
+        if (gameState.get(i) == myQueenType || gameState.get(i) == opponentQueenType) {
+            int[] pos = indexToRC(i);
+            int regionSize = calculateRegionSize(gameState, pos[0], pos[1]);
+            
+            if (gameState.get(i) == myQueenType) {
+                myRegionScore += regionSize;
+            } else {
+                opponentRegionScore += regionSize;
+            }
+        }
+    }
+    
+    return myRegionScore - opponentRegionScore;
+}
+
+// Calculate the size of a connected region a queen can move in
+private int calculateRegionSize(ArrayList<Integer> gameState, int row, int col) {
+    java.util.Set<String> visited = new java.util.HashSet<>();
+    java.util.Queue<int[]> queue = new java.util.LinkedList<>();
+    
+    queue.add(new int[]{row, col});
+    visited.add(row + "," + col);
+    
+    int[][] directions = {
+        {-1, 0}, {1, 0}, {0, -1}, {0, 1}, 
+        {-1, -1}, {-1, 1}, {1, -1}, {1, 1}
+    };
+    
+    while (!queue.isEmpty()) {
+        int[] current = queue.poll();
+        
+        for (int[] dir : directions) {
+            int r = current[0];
+            int c = current[1];
+            
+            // Check each direction until hitting a non-empty square
+            while (true) {
+                r += dir[0];
+                c += dir[1];
+                
+                // Check if still on board
+                if (r < 1 || r > 10 || c < 1 || c > 10) {
+                    break;
+                }
+                
+                String key = r + "," + c;
+                if (!visited.contains(key)) {
+                    int index = rcToIndex(r, c);
+                    if (gameState.get(index) == 0) { // Empty space
+                        queue.add(new int[]{r, c});
+                        visited.add(key);
+                    } else {
+                        break; // Hit a piece or arrow
+                    }
+                } else {
+                    break; // Already visited
+                }
+            }
+        }
+    }
+    
+    // Region size is the number of squares visited
+    return visited.size();
+}
 
     
     // Class to represent a move
