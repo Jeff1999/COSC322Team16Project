@@ -152,8 +152,9 @@ public class MinimaxAI {
     // f_value
     private int evaluateState(ArrayList<Integer> gameState) {
         // Get the game phase (early, mid, late) based on number of moves
-        int totalMoves = generateMoves(gameState, true).size() + generateMoves(gameState, false).size();
-        boolean isEndgame = totalMoves < 50; // Adjust this threshold as needed
+        int game = countEmptySpot(gameState);
+        //int totalMoves = generateMoves(gameState, true).size() + generateMoves(gameState, false).size();
+        //boolean isEndgame = totalMoves < 50; // Adjust this threshold as needed
         
         // Mobility (more important in endgame)
         int myMoves = generateMoves(gameState, true).size();
@@ -173,11 +174,37 @@ public class MinimaxAI {
 
         
         // Adjust weights based on game phase
-        int mobilityWeight = isEndgame ? 5 : 8;
-        int territoryWeight = isEndgame ? 12 : 15;
-        int partitioningWeight = 11;
-        int queenPositionWeight = isEndgame ? 6 : 8;
-        int arrowBlockingWeight = 5;
+        /*int mobilityWeight = isEndgame ? 4 : 8;
+        int territoryWeight = isEndgame ? 10 : 15;
+        int partitioningWeight = isEndgame ? 15 : 11;
+        int queenPositionWeight = isEndgame ? 7 : 8;
+        int arrowBlockingWeight = isEndgame ? 7 : 5;*/
+        int mobilityWeight = 0;
+        int territoryWeight = 0;
+        int partitioningWeight = 0;
+        int queenPositionWeight = 0;
+        int arrowBlockingWeight = 0;
+        if(game > 60){ // empty spots are greater than 60, early game
+            mobilityWeight = 10;
+            territoryWeight = 14;
+            partitioningWeight = 8;
+            queenPositionWeight = 9;
+            arrowBlockingWeight = 4;
+        }
+        else if (game > 30 && game < 60){ // empty spots are greater than 30, mid game
+            mobilityWeight = 8;
+            territoryWeight = 15;
+            partitioningWeight = 11;
+            queenPositionWeight = 8;
+            arrowBlockingWeight = 5;
+        }
+        else{ // end game 
+            mobilityWeight = 5;
+            territoryWeight = 12;
+            partitioningWeight = 11;
+            queenPositionWeight = 6;
+            arrowBlockingWeight = 5;
+        }
         
         // Calculate final score
         int total = (mobilityScore * mobilityWeight) + 
@@ -189,7 +216,16 @@ public class MinimaxAI {
     
         return total;
     }
-
+    // check how many empty spots that left on the board
+    private int countEmptySpot(ArrayList<Integer> gameStage){
+        int emptySpot = 0;
+        for (int i = 0; i < gameStage.size(); i++) {
+            if(gameStage.get(i) == 0){
+                emptySpot++;
+            }
+        }
+        return emptySpot;
+    }
     // Evaluate the position of the queens
     private int evaluateQueenPosition(ArrayList<Integer> gameState){
             int myQueenScore = 0;
@@ -398,7 +434,7 @@ public class MinimaxAI {
         return (myTerritorySize * 1) + (myExclusiveSize * 2) - (opponentTerritorySize * 1) - (opponentExclusiveSize * 2);
     }
 
-    private int evaluatePartitioning(ArrayList<Integer> gameState) {
+    /*private int evaluatePartitioning(ArrayList<Integer> gameState) {
         int partitionScore = 0;
         
         // Get positions of all queens
@@ -434,6 +470,43 @@ public class MinimaxAI {
         }
         
         return partitionScore;
+    }*/
+    // check the connection 
+    private int evaluatePartitioning(ArrayList<Integer> gameState) {
+
+            int myRegion = countConnectedRegions(gameState, isBlackPlayer? 1:2);
+            int opponentRegion = countConnectedRegions(gameState, isBlackPlayer ? 2:1);
+        
+        return (opponentRegion - myRegion) * 10; // opponent has more regions, the value is lager
+    
+    }
+    // flood fill to count the connection regions
+    private int countConnectedRegions(ArrayList<Integer> gameState, int player){
+            boolean [] visited = new boolean[gameState.size()];
+            int regions = 0;
+
+            for (int i = 0; i < gameState.size(); i++) {
+                if(!visited[i] && gameState.get(i) == player){
+                    regions++;
+                    int[] pos = indexToRC(i);
+                    floodFill(gameState,visited,i,pos[0],pos[1],player);
+                }
+                
+            }
+        return regions;
+        
+    }
+    private void floodFill(ArrayList<Integer> gameState, boolean[] visited, int i, int x,int y, int player){
+        if(i<0 || i >= gameState.size() || visited[i] || gameState.get(i) != player){ 
+            return;
+        } 
+
+        visited[i] = true;
+
+        floodFill(gameState, visited, i, x+1, y, player);
+        floodFill(gameState, visited, i, x-1, y, player);
+        floodFill(gameState, visited, i, x, y+1, player);
+        floodFill(gameState, visited, i, x, y-1, player);
     }
     
     private int countEmptyNeighbors(ArrayList<Integer> gameState, int row, int col) {
