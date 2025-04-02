@@ -6,7 +6,7 @@ import java.util.List;
 public class MinimaxAI {
     private boolean isBlackPlayer; // Whether the AI is playing as black
     public long startTime = System.currentTimeMillis();// start time
-    public long timeLimted = 25000; //time limited 30s;
+    public long timeLimted = 15000;//10000; //time limited 30s;
     public MinimaxAI(boolean isBlackPlayer) {
         this.isBlackPlayer = isBlackPlayer;
     }
@@ -185,25 +185,25 @@ public class MinimaxAI {
         int queenPositionWeight = 0;
         int arrowBlockingWeight = 0;
         if(game > 60){ // empty spots are greater than 60, early game
-            mobilityWeight = 10;
-            territoryWeight = 14;
-            partitioningWeight = 8;
-            queenPositionWeight = 9;
-            arrowBlockingWeight = 4;
+            mobilityWeight = 15;
+            territoryWeight = 10;
+            partitioningWeight = 5;
+            queenPositionWeight = 12;
+            arrowBlockingWeight = 3;
         }
         else if (game > 30 && game < 60){ // empty spots are greater than 30, mid game
-            mobilityWeight = 8;
+            mobilityWeight = 12;
             territoryWeight = 15;
-            partitioningWeight = 11;
+            partitioningWeight = 12;
             queenPositionWeight = 8;
-            arrowBlockingWeight = 5;
+            arrowBlockingWeight = 8;
         }
         else{ // end game 
-            mobilityWeight = 5;
-            territoryWeight = 12;
-            partitioningWeight = 11;
-            queenPositionWeight = 6;
-            arrowBlockingWeight = 5;
+            mobilityWeight = 8;
+            territoryWeight = 10;
+            partitioningWeight = 18;
+            queenPositionWeight = 4;
+            arrowBlockingWeight = 10;
         }
         
         // Calculate final score
@@ -507,6 +507,10 @@ public class MinimaxAI {
         floodFill(gameState, visited, i, x-1, y, player);
         floodFill(gameState, visited, i, x, y+1, player);
         floodFill(gameState, visited, i, x, y-1, player);
+        floodFill(gameState, visited, i, x+1, y+1, player);
+        floodFill(gameState, visited, i, x-1, y-1, player);
+        floodFill(gameState, visited, i, x+1, y-1, player);
+        floodFill(gameState, visited, i, x-1, y+1, player);
     }
     
     private int countEmptyNeighbors(ArrayList<Integer> gameState, int row, int col) {
